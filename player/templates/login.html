@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+
+{% block title %}登录 - 钓鱼游戏{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-lg">
+            <div class="card-header bg-info text-white text-center">
+                <h4 class="mb-0"><i class="fas fa-sign-in-alt"></i> 玩家登录</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="user_id" class="form-label">用户ID</label>
+                        <input type="text" class="form-control" id="user_id" name="user_id" 
+                               {% if first_login %}value="{{ user_id }}" readonly{% endif %}
+                               placeholder="输入您在游戏中的用户ID" required>
+                        <div class="form-text">
+                            {% if first_login %}
+                                首次登录，请设置您的登录密钥
+                            {% else %}
+                                请输入您在游戏中的用户ID
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            {% if first_login %}设置密钥{% else %}登录密钥{% endif %}
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="{% if first_login %}设置一个登录密钥{% else %}输入您的登录密钥{% endif %}" 
+                               {% if not first_login %}required{% endif %}>
+                        <div class="form-text">
+                            {% if first_login %}
+                                请妥善保管密钥，用于后续登录
+                            {% else %}
+                                首次登录时设置的密钥
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-sign-in-alt"></i> 
+                            {% if first_login %}设置密钥并登录{% else %}登录{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 请先在游戏中使用 <code>,注册</code> 命令注册账号
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

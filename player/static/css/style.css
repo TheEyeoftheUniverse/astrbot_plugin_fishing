@@ -1,0 +1,135 @@
+/* 玩家WebUI自定义样式 */
+
+body {
+    padding-top: 70px;
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn {
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+footer {
+    margin-top: auto;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+/* 快捷功能按钮样式 */
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover,
+.btn-outline-success:hover,
+.btn-outline-info:hover,
+.btn-outline-warning:hover,
+.btn-outline-danger:hover {
+    transform: scale(1.05);
+}
+
+/* 通知面板样式 */
+#notificationPanel {
+    /* 移除自动动画，改为始终显示 */
+}
+
+#notificationPanel .card-header {
+    user-select: none;
+}
+
+#notificationPanel .card-header:hover {
+    background-color: #0d6efd !important;
+    opacity: 0.9;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+#unreadBadge {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+#notificationBody::-webkit-scrollbar {
+    width: 6px;
+}
+
+#notificationBody::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#notificationBody::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+#notificationBody::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.list-group-item {
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+}
+
+.list-group-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    body {
+        padding-top: 60px;
+    }
+    
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+    
+    #notificationPanel {
+        width: 100% !important;
+        max-width: 350px;
+    }
+}

@@ -1,0 +1,984 @@
+{% extends "layout.html" %}
+
+{% block title %}酒馆 - 钓鱼插件{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-beer"></i> 渔夫酒馆</h2>
+        <p class="text-muted">空军渔夫在线发牌 🎴</p>
+    </div>
+</div>
+
+<!-- 公告栏 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-thumbtack"></i> 酒馆公告</h5>
+                {% if is_admin %}
+                <button class="btn btn-sm btn-dark" onclick="editAnnouncement()">
+                    <i class="fas fa-edit"></i> 编辑
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div id="announcementContent" class="announcement-content">
+                    {{ announcement | safe if announcement else '<p class="text-muted">暂无公告</p>' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 排行榜 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-link text-white text-decoration-none w-100 text-start p-0" 
+                            type="button" data-bs-toggle="collapse" data-bs-target="#leaderboardCollapse">
+                        <h5 class="mb-0">
+                            <i class="fas fa-trophy"></i> 钓鱼佬排行榜
+                            <i class="fas fa-chevron-down ms-2"></i>
+                        </h5>
+                    </button>
+                    <button class="btn btn-sm btn-light" onclick="refreshLeaderboard()">
+                        <i class="fas fa-sync"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="collapse" id="leaderboardCollapse">
+                <div class="card-body">
+                    <!-- 排行榜标签页 -->
+                    <ul class="nav nav-tabs mb-3" id="leaderboardTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="coins-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#coins-leaderboard" type="button" role="tab">
+                                <i class="fas fa-coins text-warning"></i> 金币榜
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="fishing-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#fishing-leaderboard" type="button" role="tab">
+                                <i class="fas fa-fish text-info"></i> 钓鱼次数榜
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="weight-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#weight-leaderboard" type="button" role="tab">
+                                <i class="fas fa-weight-hanging text-primary"></i> 总重量榜
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="earned-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#earned-leaderboard" type="button" role="tab">
+                                <i class="fas fa-chart-line text-success"></i> 累计收入榜
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- 排行榜内容 -->
+                    <div class="tab-content" id="leaderboardTabContent">
+                        <!-- 金币榜 -->
+                        <div class="tab-pane fade show active" id="coins-leaderboard" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>排名</th>
+                                            <th>钓鱼佬</th>
+                                            <th>金币</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rank in leaderboard.coins %}
+                                        <tr {% if rank.user_id == current_user_id %}class="table-primary"{% endif %}>
+                                            <td>
+                                                {% if rank.rank == 1 %}
+                                                <i class="fas fa-crown text-warning"></i>
+                                                {% elif rank.rank == 2 %}
+                                                <i class="fas fa-medal text-secondary"></i>
+                                                {% elif rank.rank == 3 %}
+                                                <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                                {% else %}
+                                                {{ rank.rank }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ rank.nickname or '渔夫' + rank.user_id[-4:] }}                                                {% if rank.title and rank.title != '无称号' %}
+                                                <span class="badge bg-success" style="font-size: 0.75rem;">{{ rank.title }}</span>
+                                                {% endif %}                                                {% if rank.title and rank.title != '无称号' %}
+                                                <span class="badge bg-success" style="font-size: 0.75rem;">{{ rank.title }}</span>
+                                                {% endif %}
+                                                {% if rank.user_id == current_user_id %}
+                                                <span class="badge bg-primary">你</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><strong class="text-warning">{{ rank.coins | default(0) }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 钓鱼次数榜 -->
+                        <div class="tab-pane fade" id="fishing-leaderboard" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>排名</th>
+                                            <th>钓鱼佬</th>
+                                            <th>钓鱼次数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rank in leaderboard.fishing %}
+                                        <tr {% if rank.user_id == current_user_id %}class="table-primary"{% endif %}>
+                                            <td>
+                                                {% if rank.rank == 1 %}
+                                                <i class="fas fa-crown text-warning"></i>
+                                                {% elif rank.rank == 2 %}
+                                                <i class="fas fa-medal text-secondary"></i>
+                                                {% elif rank.rank == 3 %}
+                                                <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                                {% else %}
+                                                {{ rank.rank }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ rank.nickname or '渔夫' + rank.user_id[-4:] }}
+                                                {% if rank.title and rank.title != '无称号' %}
+                                                <span class="badge bg-success" style="font-size: 0.75rem;">{{ rank.title }}</span>
+                                                {% endif %}
+                                                {% if rank.user_id == current_user_id %}
+                                                <span class="badge bg-primary">你</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><strong class="text-info">{{ rank.total_fishing_count | default(0) }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 总重量榜 -->
+                        <div class="tab-pane fade" id="weight-leaderboard" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>排名</th>
+                                            <th>钓鱼佬</th>
+                                            <th>总重量 (kg)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rank in leaderboard.weight %}
+                                        <tr {% if rank.user_id == current_user_id %}class="table-primary"{% endif %}>
+                                            <td>
+                                                {% if rank.rank == 1 %}
+                                                <i class="fas fa-crown text-warning"></i>
+                                                {% elif rank.rank == 2 %}
+                                                <i class="fas fa-medal text-secondary"></i>
+                                                {% elif rank.rank == 3 %}
+                                                <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                                {% else %}
+                                                {{ rank.rank }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ rank.nickname or '渔夫' + rank.user_id[-4:] }}
+                                                {% if rank.title and rank.title != '无称号' %}
+                                                <span class="badge bg-success" style="font-size: 0.75rem;">{{ rank.title }}</span>
+                                                {% endif %}
+                                                {% if rank.user_id == current_user_id %}
+                                                <span class="badge bg-primary">你</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><strong class="text-primary">{{ (rank.total_weight_caught | default(0) / 1000) | round(2) }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 累计收入榜 -->
+                        <div class="tab-pane fade" id="earned-leaderboard" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>排名</th>
+                                            <th>钓鱼佬</th>
+                                            <th>累计收入</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rank in leaderboard.earned %}
+                                        <tr {% if rank.user_id == current_user_id %}class="table-primary"{% endif %}>
+                                            <td>
+                                                {% if rank.rank == 1 %}
+                                                <i class="fas fa-crown text-warning"></i>
+                                                {% elif rank.rank == 2 %}
+                                                <i class="fas fa-medal text-secondary"></i>
+                                                {% elif rank.rank == 3 %}
+                                                <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                                {% else %}
+                                                {{ rank.rank }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ rank.nickname or '渔夫' + rank.user_id[-4:] }}
+                                                {% if rank.title and rank.title != '无称号' %}
+                                                <span class="badge bg-success" style="font-size: 0.75rem;">{{ rank.title }}</span>
+                                                {% endif %}
+                                                {% if rank.user_id == current_user_id %}
+                                                <span class="badge bg-primary">你</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><strong class="text-success">{{ rank.total_coins_earned | default(0) }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 科考公告板 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <button class="btn btn-link text-white text-decoration-none w-100 text-start p-0" 
+                        type="button" data-bs-toggle="collapse" data-bs-target="#expeditionCollapse">
+                    <h5 class="mb-0">
+                        <i class="fas fa-compass"></i> 科学考察公告板
+                        {% if expeditions %}
+                        <span class="badge bg-light text-info ms-2">{{ expeditions|length }} 个进行中</span>
+                        {% else %}
+                        <span class="badge bg-secondary ms-2">0 个进行中</span>
+                        {% endif %}
+                        <i class="fas fa-chevron-down ms-2"></i>
+                    </h5>
+                </button>
+            </div>
+            <div class="collapse show" id="expeditionCollapse">
+                <div class="card-body">
+                    {% if expeditions %}
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                            {% for exp in expeditions %}
+                            <div class="col">
+                                <div class="card h-100 expedition-card {% if exp.type == 'short' %}border-success{% elif exp.type == 'medium' %}border-warning{% else %}border-danger{% endif %}">
+                                    <div class="card-header {% if exp.type == 'short' %}bg-success{% elif exp.type == 'medium' %}bg-warning{% else %}bg-danger{% endif %} text-white d-flex justify-content-between align-items-center">
+                                        <strong>
+                                            {% if exp.type == 'short' %}
+                                            <i class="fas fa-leaf"></i> 探险科考
+                                            {% elif exp.type == 'medium' %}
+                                            <i class="fas fa-compass"></i> 征服科考
+                                            {% else %}
+                                            <i class="fas fa-rocket"></i> 圣域科考
+                                            {% endif %}
+                                        </strong>
+                                        <span class="badge bg-light text-dark">{{ exp.member_count }}人</span>
+                                    </div>
+                                    <div class="card-body d-flex flex-column">
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> 队长：{{ exp.creator_name }}
+                                            </small>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock"></i> 剩余时间：{{ exp.remaining_hours }}小时{{ exp.remaining_minutes }}分钟
+                                            </small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <small><strong>总进度</strong></small>
+                                                <small class="text-muted">{{ (exp.total_progress * 100)|round(1) }}%</small>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" 
+                                                     role="progressbar" 
+                                                     style="width: {{ (exp.total_progress * 100)|round(1) }}%"
+                                                     aria-valuenow="{{ (exp.total_progress * 100)|round(1) }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    {{ (exp.total_progress * 100)|round(1) }}%
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <small><strong>目标鱼类</strong></small>
+                                            <div class="mt-1">
+                                                {% for key, target in exp.targets.items() %}
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="small">
+                                                        {{ '⭐' * target.rarity }} {{ target.fish_name }}
+                                                    </span>
+                                                    <span class="small text-muted">{{ target.caught }}/{{ target.required }}</span>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div class="mt-auto">
+                                            <button class="btn btn-sm btn-outline-primary w-100" 
+                                                    onclick="copyExpeditionCode('{{ exp.expedition_id }}')">
+                                                <i class="fas fa-copy"></i> 复制邀请码
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-compass fa-3x mb-3"></i>
+                            <p>暂无进行中的科学考察</p>
+                            <small>使用命令 <code>,发起科考 探险|征服|圣域</code> 发起科考队伍</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 今日水族箱展览会 -->
+{% if exhibition and exhibition.featured_user %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <button class="btn btn-link text-white text-decoration-none w-100 text-start p-0" 
+                        type="button" data-bs-toggle="collapse" data-bs-target="#exhibitionCollapse">
+                    <h5 class="mb-0">
+                        <i class="fas fa-fish"></i> 今日水族箱展览会
+                        <i class="fas fa-chevron-down ms-2"></i>
+                    </h5>
+                </button>
+            </div>
+            <div class="collapse show" id="exhibitionCollapse">
+                <div class="card-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-star"></i> 今日展览者：
+                        <strong>{{ exhibition.featured_user.nickname }}</strong>
+                        <span class="badge bg-success ms-1">{{ exhibition.featured_user.current_title }}</span>
+                        <br>
+                        <small>
+                            TA的水族箱里有足足 <strong style="color: #ffffff; text-shadow: 0 0 10px rgba(255,255,255,0.8);">{{ exhibition.featured_user.stats.total_count | default(0) }}</strong> 条鱼，
+                            总价值竟高达 <strong style="color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.8);">{{ exhibition.featured_user.stats.total_value | default(0) }}</strong> 金币！
+                        </small>
+                    </div>
+
+                    <!-- 装备展示 -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-fishing-rod text-primary"></i> 鱼竿</h6>
+                                    {% if exhibition.featured_user.equipped_rod %}
+                                        <p class="mb-1">{{ exhibition.featured_user.equipped_rod.name }}</p>
+                                        <small class="text-warning">{{ '★' * exhibition.featured_user.equipped_rod.rarity }}</small>
+                                        {% if exhibition.featured_user.equipped_rod.refine_level > 0 %}
+                                        <small class="text-success"> +{{ exhibition.featured_user.equipped_rod.refine_level }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <p class="text-muted mb-0">未装备</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-ring text-info"></i> 饰品</h6>
+                                    {% if exhibition.featured_user.equipped_accessory %}
+                                        <p class="mb-1">{{ exhibition.featured_user.equipped_accessory.name }}</p>
+                                        <small class="text-warning">{{ '★' * exhibition.featured_user.equipped_accessory.rarity }}</small>
+                                        {% if exhibition.featured_user.equipped_accessory.refine_level > 0 %}
+                                        <small class="text-success"> +{{ exhibition.featured_user.equipped_accessory.refine_level }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <p class="text-muted mb-0">未装备</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-cookie-bite text-warning"></i> 鱼饵</h6>
+                                    {% if exhibition.featured_user.current_bait %}
+                                        <p class="mb-1">{{ exhibition.featured_user.current_bait.name }}</p>
+                                        <small class="text-warning">{{ '★' * exhibition.featured_user.current_bait.rarity }}</small>
+                                        <small class="text-muted"> (剩余 {{ exhibition.featured_user.current_bait.quantity }})</small>
+                                    {% else %}
+                                        <p class="text-muted mb-0">未使用</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 稀有度筛选 -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm active" onclick="filterExhibitionByRarity('all')">
+                                    <i class="fas fa-th"></i> 全部
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(1)">普通</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(2)">常见</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(3)">优质</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(4)">稀有</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(5)">史诗</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(6)">传说</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(7)">神话</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(8)">远古</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(9)">永恒</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterExhibitionByRarity(10)">至高</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 水族箱鱼类展示 -->
+                    <h6 class="mb-3"><i class="fas fa-water"></i> 水族箱收藏</h6>
+                    <div class="row g-2">
+                        {% for fish in exhibition.featured_user.aquarium %}
+                        {% set fish_key = fish.fish_id|string + '-' + fish.quality_level|string %}
+                        <div class="col-md-4 col-lg-3 exhibition-fish-card" data-rarity="{{ fish.rarity }}">
+                            <div class="card h-100 {% if fish.quality_level == 1 %}border-warning{% else %}border-info{% endif %}">
+                                <div class="card-body p-2 d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div class="flex-grow-1">
+                                            <h6 class="card-title mb-0">
+                                                {{ fish.name }}
+                                                {% if fish.quality_level == 1 %}
+                                                    <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">✨</span>
+                                                {% endif %}
+                                            </h6>
+                                            <small class="badge bg-info" style="font-size: 0.65rem;">
+                                                {% for i in range(fish.rarity) %}★{% endfor %}
+                                            </small>
+                                        </div>
+                                        <h6 class="mb-0 text-primary">×{{ fish.quantity }}</h6>
+                                    </div>
+                                    
+                                    <hr class="my-1">
+                                    
+                                    <!-- 鱼类描述（固定高度，可滚动） -->
+                                    <p class="card-text mb-2 text-muted" style="font-size: 0.8rem; height: 60px; overflow-y: auto;">
+                                        {{ fish.description | default('暂无描述') }}
+                                    </p>
+                                    
+                                    <!-- 统计数据（已隐藏重量，仅保留占位以保持布局一致） -->
+                                    <div class="small text-muted mb-2" style="display:none;">
+                                        {% if fish.max_weight %}
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span><i class="fas fa-weight-hanging"></i> 最大重量:</span>
+                                            <strong>{{ "%.2f"|format(fish.max_weight / 1000) }}kg</strong>
+                                        </div>
+                                        {% endif %}
+                                        {% if fish.min_weight %}
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span><i class="fas fa-weight-hanging"></i> 最小重量:</span>
+                                            <strong>{{ "%.2f"|format(fish.min_weight / 1000) }}kg</strong>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- 价值信息（参考图鉴页，左对齐） -->
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-coins text-warning"></i> {{ fish.actual_value | default(fish.base_value | default(0)) }}
+                                        </small>
+                                    </div>
+
+                                    <!-- 评论区（使用 mt-auto 推到底部） -->
+                                    <div class="border-top pt-2 mt-auto">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <button class="btn btn-sm btn-outline-primary w-100" 
+                                                    type="button"
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#comments-collapse-{{ fish_key }}"
+                                                    aria-expanded="false">
+                                                <i class="fas fa-comment"></i> 留言板
+                                                {% set fish_comments = exhibition.comments.get(fish_key, []) %}
+                                                <span class="badge {% if fish_comments %}bg-primary{% else %}bg-secondary{% endif %} ms-1">{{ fish_comments|length if fish_comments else 0 }}</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- 评论区域（默认折叠，展开时自动显示输入框） -->
+                                        <div class="collapse mt-2" id="comments-collapse-{{ fish_key }}">
+                                            <!-- 评论输入框（展开时自动显示） -->
+                                            <div id="comment-box-{{ fish_key }}" class="mb-2">
+                                                <textarea class="form-control form-control-sm mb-1" 
+                                                          id="comment-input-{{ fish_key }}" 
+                                                          rows="2" 
+                                                          placeholder="发表你的想法（如求购信息）..." 
+                                                          maxlength="200"></textarea>
+                                                <div class="text-end">
+                                                    <button class="btn btn-sm btn-primary" 
+                                                            onclick="postExhibitionComment('{{ fish_key }}')">发送</button>
+                                                </div>
+                                            </div>
+                                            
+                                            <hr class="my-2">
+
+                                            <!-- 评论列表 -->
+                                            <div id="comments-{{ fish_key }}" style="max-height: 200px; overflow-y: auto;">
+                                                {% if fish_comments %}
+                                                    {% for comment in fish_comments %}
+                                                    <div class="alert alert-light py-1 mb-1" style="font-size: 0.75rem;" data-comment-id="{{ comment.id }}">
+                                                        <div class="d-flex justify-content-between">
+                                                            <div>
+                                                                <strong>{{ comment.username }}:</strong>
+                                                                {{ comment.content }}
+                                                            </div>
+                                                            {% if comment.user_id == current_user_id or exhibition.featured_user.user_id == current_user_id %}
+                                                            <button class="btn btn-sm btn-link text-danger p-0 ms-1" 
+                                                                    onclick="deleteExhibitionComment('{{ fish_key }}', '{{ comment.id }}')">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="text-muted" style="font-size: 0.65rem;">{{ comment.timestamp }}</div>
+                                                    </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="text-muted small text-center">暂无留言</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 留言板 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <button class="btn btn-link text-white text-decoration-none w-100 text-start p-0" 
+                        type="button" data-bs-toggle="collapse" data-bs-target="#messageboardCollapse">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments"></i> 留言板
+                        {% if messages %}
+                        <span class="badge bg-light text-primary ms-2">{{ messages|length }} 条留言</span>
+                        {% else %}
+                        <span class="badge bg-secondary ms-2">0 条留言</span>
+                        {% endif %}
+                        <i class="fas fa-chevron-down ms-2"></i>
+                    </h5>
+                </button>
+            </div>
+            <div class="collapse show" id="messageboardCollapse">
+            <div class="card-body">
+                <!-- 发表留言 -->
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="mb-3"><i class="fas fa-pen"></i> 发表留言</h6>
+                        <textarea id="messageInput" class="form-control mb-3" rows="3" 
+                                  placeholder="分享你的钓鱼故事、空军经历或是吐槽..." maxlength="500"></textarea>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <span id="charCount">0</span>/500 字
+                            </small>
+                            <button class="btn btn-primary" onclick="postMessage()">
+                                <i class="fas fa-paper-plane"></i> 发送
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 留言列表 -->
+                <div id="messageList">
+                    {% if messages %}
+                        {% for msg in messages %}
+                        <div class="card mb-3 message-item" data-message-id="{{ msg.id }}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong class="text-primary">
+                                            <i class="fas fa-user-circle"></i> 
+                                            {{ msg.username }}
+                                            {% if msg.user_id == '2645956495' %}
+                                            <span class="badge bg-danger ms-1">管理员</span>
+                                            {% endif %}
+                                        </strong>
+                                        <small class="text-muted ms-2">
+                                            <i class="fas fa-clock"></i> {{ msg.timestamp }}
+                                        </small>
+                                    </div>
+                                    {% if msg.user_id == current_user_id or is_admin %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteMessage('{{ msg.id }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                <p class="mb-0" style="white-space: pre-wrap;">{{ msg.content }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-inbox"></i> 还没有留言，快来抢沙发吧！
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 分页 -->
+                {% if total_pages > 1 %}
+                <nav aria-label="留言分页">
+                    <ul class="pagination justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}">上一页</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for p in range(1, total_pages + 1) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}">下一页</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑公告模态框 -->
+<div class="modal fade" id="editAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> 编辑公告</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">公告内容（支持HTML）</label>
+                    <textarea id="announcementEdit" class="form-control" rows="8" 
+                              placeholder="可以使用HTML格式...">{{ announcement }}</textarea>
+                    <small class="text-muted">提示：支持HTML标签，如 &lt;strong&gt;、&lt;em&gt;、&lt;br&gt; 等</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveAnnouncement()">
+                    <i class="fas fa-save"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 字符计数
+document.getElementById('messageInput').addEventListener('input', function() {
+    const count = this.value.length;
+    document.getElementById('charCount').textContent = count;
+    
+    if (count > 500) {
+        this.value = this.value.substring(0, 500);
+        document.getElementById('charCount').textContent = 500;
+    }
+});
+
+// 发表留言
+async function postMessage() {
+    const content = document.getElementById('messageInput').value.trim();
+    
+    if (!content) {
+        showToast('请输入留言内容', 'error');
+        return;
+    }
+    
+    if (content.length > 500) {
+        showToast('留言内容不能超过500字', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_post_message") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content: content })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('留言发表成功！', 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 删除留言
+async function deleteMessage(messageId) {
+    if (!confirm('确认删除这条留言吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_delete_message") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message_id: messageId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('留言已删除', 'success');
+            // 移除元素
+            const element = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (element) {
+                element.style.transition = 'opacity 0.3s';
+                element.style.opacity = '0';
+                setTimeout(() => element.remove(), 300);
+            }
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 编辑公告
+function editAnnouncement() {
+    const modal = new bootstrap.Modal(document.getElementById('editAnnouncementModal'));
+    modal.show();
+}
+
+// 保存公告
+async function saveAnnouncement() {
+    const content = document.getElementById('announcementEdit').value;
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_update_announcement") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content: content })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('公告更新成功！', 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 回车发送（Ctrl+Enter）
+document.getElementById('messageInput').addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'Enter') {
+        postMessage();
+    }
+});
+
+// 刷新排行榜
+async function refreshLeaderboard() {
+    showToast('正在刷新排行榜...', 'info');
+    setTimeout(() => location.reload(), 500);
+}
+
+// 显示评论框
+function showCommentBox(fishKey) {
+    document.getElementById(`comment-box-${fishKey}`).style.display = 'block';
+}
+
+// 隐藏评论框
+function hideCommentBox(fishKey) {
+    document.getElementById(`comment-box-${fishKey}`).style.display = 'none';
+    document.getElementById(`comment-input-${fishKey}`).value = '';
+}
+
+// 发表展览评论
+async function postExhibitionComment(fishKey) {
+    const content = document.getElementById(`comment-input-${fishKey}`).value.trim();
+    
+    if (!content) {
+        showToast('请输入评论内容', 'error');
+        return;
+    }
+    
+    if (content.length > 200) {
+        showToast('评论内容不能超过200字', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_add_exhibition_comment") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                fish_key: fishKey,
+                content: content 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('评论发表成功！', 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 删除展览评论
+async function deleteExhibitionComment(fishKey, commentId) {
+    if (!confirm('确认删除这条评论吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_delete_exhibition_comment") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                fish_key: fishKey,
+                comment_id: commentId 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('评论已删除', 'success');
+            // 移除评论元素
+            const element = document.querySelector(`[data-comment-id="${commentId}"]`);
+            if (element) {
+                element.style.transition = 'opacity 0.3s';
+                element.style.opacity = '0';
+                setTimeout(() => element.remove(), 300);
+            }
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 展览稀有度筛选功能
+function filterExhibitionByRarity(rarity) {
+    const cards = document.querySelectorAll('.exhibition-fish-card');
+    const buttons = document.querySelectorAll('.btn-group button');
+    
+    // 更新按钮状态
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (rarity === 'all') {
+        cards.forEach(card => card.style.display = '');
+    } else {
+        cards.forEach(card => {
+            if (card.dataset.rarity == rarity) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+}
+
+// 复制科考邀请码
+function copyExpeditionCode(code) {
+    // 创建临时输入框
+    const tempInput = document.createElement('input');
+    tempInput.value = code;
+    document.body.appendChild(tempInput);
+    
+    // 选中并复制
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999); // 兼容移动设备
+    
+    try {
+        document.execCommand('copy');
+        showToast('邀请码已复制：' + code, 'success');
+    } catch (err) {
+        showToast('复制失败，请手动复制：' + code, 'error');
+    }
+    
+    // 移除临时输入框
+    document.body.removeChild(tempInput);
+}
+</script>
+
+<style>
+.announcement-content {
+    font-size: 1.1em;
+    line-height: 1.8;
+}
+
+.message-item {
+    transition: all 0.3s ease;
+}
+
+.message-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.expedition-card {
+    transition: all 0.3s ease;
+}
+
+.expedition-card:hover {
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

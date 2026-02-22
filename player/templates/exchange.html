@@ -1,0 +1,426 @@
+{% extends "layout.html" %}
+
+{% block title %}交易所 - 钓鱼游戏{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-0">
+            <i class="fas fa-chart-line"></i> 交易所
+        </h2>
+        <p class="text-muted mt-2">大宗商品交易平台 - 低买高卖获取利润</p>
+    </div>
+</div>
+
+<!-- 账户状态 -->
+{% if not has_account %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> 您还未开通交易所账户</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">开通交易所账户需要支付 <strong>{{ "{:,}".format(account_fee) }} 金币</strong> 的开户费用。开通后您可以：</p>
+                <ul class="mb-3">
+                    <li>交易大宗商品（鱼干、鱼卵、鱼油）</li>
+                    <li>通过低买高卖赚取差价</li>
+                    <li>价格每日波动，把握市场机会</li>
+                </ul>
+                <div class="text-center">
+                    <button class="btn btn-primary btn-lg px-5" onclick="openAccount()">
+                        <i class="fas fa-unlock"></i> 立即开通账户（{{ "{:,}".format(account_fee) }} 金币）
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- 市场概况 -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">市场情绪</h6>
+                <h3 class="mb-0">
+                    {% if market_status.market_sentiment == 'bullish' %}
+                    <span class="text-success"><i class="fas fa-arrow-up"></i> 看涨</span>
+                    {% elif market_status.market_sentiment == 'bearish' %}
+                    <span class="text-danger"><i class="fas fa-arrow-down"></i> 看跌</span>
+                    {% else %}
+                    <span class="text-secondary"><i class="fas fa-minus"></i> 中性</span>
+                    {% endif %}
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">供需状况</h6>
+                <h3 class="mb-0 text-primary">{{ market_status.supply_demand }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">价格走势</h6>
+                <h3 class="mb-0">
+                    {% if market_status.price_trend == 'rising' %}
+                    <span class="text-success"><i class="fas fa-arrow-trend-up"></i> 上涨</span>
+                    {% elif market_status.price_trend == 'falling' %}
+                    <span class="text-danger"><i class="fas fa-arrow-trend-down"></i> 下跌</span>
+                    {% else %}
+                    <span class="text-secondary"><i class="fas fa-equals"></i> 稳定</span>
+                    {% endif %}
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 商品交易 -->
+<div class="row">
+    {% for commodity_id, commodity in market_status.commodities.items() %}
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-box"></i> {{ commodity.name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- 当前价格 -->
+                <div class="text-center mb-3">
+                    <h6 class="text-muted mb-2">当前价格</h6>
+                    <h2 class="text-warning mb-0">
+                        <i class="fas fa-coins"></i> {{ market_status.prices[commodity_id] }}
+                    </h2>
+                </div>
+
+                <!-- 商品描述 -->
+                <p class="text-muted small mb-3">{{ commodity.description }}</p>
+
+                <!-- 持有量 -->
+                <div class="mb-3">
+                    <h6 class="mb-2">我的持仓</h6>
+                    {% set user_qty = user_inventory.get(commodity_id, 0) %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>持有数量:</span>
+                        <strong class="text-primary">{{ user_qty }}</strong>
+                    </div>
+                    {% if user_qty > 0 %}
+                    {% set cost = user_costs.get(commodity_id, 0) %}
+                    {% set current_value = user_qty * market_status.prices[commodity_id] %}
+                    {% set profit = current_value - cost %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>成本:</span>
+                        <span class="text-muted">{{ cost }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>市值:</span>
+                        <span class="text-info">{{ current_value }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>盈亏:</span>
+                        <strong class="{% if profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ "+" if profit >= 0 else "" }}{{ profit }}
+                            ({{ "%.2f"|format((profit / cost * 100) if cost > 0 else 0) }}%)
+                        </strong>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <!-- 交易操作 -->
+                <div>
+                    <h6 class="mb-2">交易操作</h6>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button class="btn btn-success w-100" onclick="buyCommodity('{{ commodity_id }}', '{{ commodity.name }}', {{ market_status.prices[commodity_id] }})">
+                                <i class="fas fa-shopping-cart"></i> 买入
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-danger w-100" onclick="sellCommodity('{{ commodity_id }}', '{{ commodity.name }}', {{ market_status.prices[commodity_id] }}, {{ user_qty }})" {% if user_qty == 0 %}disabled{% endif %}>
+                                <i class="fas fa-hand-holding-usd"></i> 卖出
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 价格走势图 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> 价格走势（7天）</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="priceChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 价格历史表格 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-history"></i> 价格历史数据（7天）</h5>
+            </div>
+            <div class="card-body">
+                {% if price_history %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                {% for commodity_id, commodity in market_status.commodities.items() %}
+                                <th>{{ commodity.name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for date, prices in price_history.items() %}
+                            <tr>
+                                <td>{{ date }}</td>
+                                {% for commodity_id in market_status.commodities.keys() %}
+                                <td>
+                                    {% if prices.get(commodity_id) %}
+                                    <i class="fas fa-coins text-warning"></i> {{ prices[commodity_id] }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">暂无历史价格数据</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 交易说明 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> 交易提示</h5>
+            <ul class="mb-0">
+                <li>商品价格每日波动，把握低买高卖的时机</li>
+                <li>持仓成本为您购买该商品时的平均价格</li>
+                <li>市值 = 持有数量 × 当前价格</li>
+                <li>盈亏 = 市值 - 成本总额</li>
+                <li>商品可以放到市场上出售给其他玩家</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// 绘制价格走势图
+function drawPriceChart() {
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    
+    const labels = {{ labels | tojson }};
+    const commodities = {{ market_status.commodities | tojson }};
+    const historyData = {{ history_data | tojson }};
+    
+    const datasets = [];
+    const colors = {
+        'dried_fish': { border: 'rgb(255, 159, 64)', bg: 'rgba(255, 159, 64, 0.2)' },
+        'fish_roe': { border: 'rgb(255, 99, 132)', bg: 'rgba(255, 99, 132, 0.2)' },
+        'fish_oil': { border: 'rgb(54, 162, 235)', bg: 'rgba(54, 162, 235, 0.2)' }
+    };
+    
+    for (const [commodityId, commodity] of Object.entries(commodities)) {
+        if (historyData[commodityId]) {
+            datasets.push({
+                label: commodity.name,
+                data: historyData[commodityId],
+                borderColor: colors[commodityId].border,
+                backgroundColor: colors[commodityId].bg,
+                tension: 0.3,
+                fill: true
+            });
+        }
+    }
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: '大宗商品价格走势'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' 金币';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' 金币';
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+}
+
+// 页面加载完成后绘制图表
+if (document.getElementById('priceChart')) {
+    drawPriceChart();
+}
+
+// 开通账户
+async function openAccount() {
+    const accountFee = {{ account_fee }};
+    if (!confirm(`确认开通交易所账户吗？\n开户费用: ${accountFee.toLocaleString()} 金币`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_open_exchange_account") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 买入商品
+async function buyCommodity(commodityId, commodityName, currentPrice) {
+    const qty = prompt(`买入【${commodityName}】\n当前价格: ${currentPrice} 金币/个\n请输入买入数量:`, '1');
+    if (!qty || qty <= 0) return;
+    
+    const quantity = parseInt(qty);
+    if (isNaN(quantity) || quantity <= 0) {
+        showToast('数量无效', 'error');
+        return;
+    }
+    
+    const totalCost = quantity * currentPrice;
+    if (!confirm(`确认购买 ${quantity} 个【${commodityName}】吗？\n总价: ${totalCost} 金币`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_buy_commodity") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                commodity_id: commodityId,
+                quantity: quantity,
+                current_price: currentPrice
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 卖出商品
+async function sellCommodity(commodityId, commodityName, currentPrice, maxQty) {
+    if (maxQty === 0) {
+        showToast('您没有该商品', 'error');
+        return;
+    }
+    
+    const qty = prompt(`卖出【${commodityName}】\n当前价格: ${currentPrice} 金币/个\n持有数量: ${maxQty}\n请输入卖出数量:`, '1');
+    if (!qty || qty <= 0) return;
+    
+    const quantity = parseInt(qty);
+    if (isNaN(quantity) || quantity <= 0 || quantity > maxQty) {
+        showToast('数量无效', 'error');
+        return;
+    }
+    
+    const totalValue = quantity * currentPrice;
+    if (!confirm(`确认卖出 ${quantity} 个【${commodityName}】吗？\n总价: ${totalValue} 金币`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_sell_commodity") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                commodity_id: commodityId,
+                quantity: quantity,
+                current_price: currentPrice
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+</script>
+{% endblock %}

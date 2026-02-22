@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ page_title }} - 钓鱼游戏{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-lg">
+            <div class="card-header bg-info text-white text-center">
+                <h3 class="mb-0"><i class="fas {{ page_icon }}"></i> {{ page_title }}</h3>
+            </div>
+            <div class="card-body text-center py-5">
+                <i class="fas {{ page_icon }} fa-5x text-muted mb-4"></i>
+                <h4 class="text-muted mb-4">功能开发中</h4>
+                <p class="lead text-muted mb-4">{{ description }}</p>
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i> 此功能即将推出，敬请期待！
+                </div>
+                <a href="{{ url_for('player_bp.index') }}" class="btn btn-info mt-3">
+                    <i class="fas fa-home"></i> 返回主页
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

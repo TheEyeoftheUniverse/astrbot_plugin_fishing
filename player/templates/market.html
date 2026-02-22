@@ -1,0 +1,526 @@
+{% extends "layout.html" %}
+
+{% block title %}交易市场 - 钓鱼游戏{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-0">
+            <i class="fas fa-store"></i> 交易市场
+        </h2>
+        <p class="text-muted mt-2">与其他玩家交易物品</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 左侧：市场商品列表 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-shopping-cart"></i> 市场商品</h5>
+            </div>
+            <div class="card-body">
+                <!-- 标签页导航 -->
+                <ul class="nav nav-tabs mb-3" id="marketTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="rods-tab" data-bs-toggle="tab" data-bs-target="#rods" type="button">
+                            <i class="fas fa-fishing-rod"></i> 鱼竿 ({{ rods|length }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="accessories-tab" data-bs-toggle="tab" data-bs-target="#accessories" type="button">
+                            <i class="fas fa-gem"></i> 饰品 ({{ accessories|length }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="fish-tab" data-bs-toggle="tab" data-bs-target="#fish" type="button">
+                            <i class="fas fa-fish"></i> 鱼类 ({{ fish|length }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items" type="button">
+                            <i class="fas fa-box"></i> 道具 ({{ items|length }})
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- 标签页内容 -->
+                <div class="tab-content" id="marketTabContent">
+                    <!-- 鱼竿标签页 -->
+                    <div class="tab-pane fade show active" id="rods" role="tabpanel">
+                        {% if rods %}
+                        <div class="row g-3">
+                            {% for listing in rods %}
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="mb-1">{{ listing.item_name }}</h6>
+                                                <span class="badge bg-info">
+                                                    {% for i in range(listing.rarity) %}★{% endfor %}
+                                                </span>
+                                                {% if listing.refine_level > 0 %}
+                                                <span class="badge bg-warning text-dark">+{{ listing.refine_level }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="text-warning fw-bold">
+                                                    <i class="fas fa-coins"></i> {{ listing.price }}
+                                                </div>
+                                                <small class="text-muted">卖家: {{ listing.seller_name if not listing.is_anonymous else '匿名' }}</small>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mb-2">{{ listing.description or '暂无描述' }}</p>
+                                        {% if listing.attributes %}
+                                        <div class="small text-info mb-2">{{ listing.attributes }}</div>
+                                        {% endif %}
+                                        {% if listing.seller_id != user_id %}
+                                        <button class="btn btn-success btn-sm w-100" onclick="buyMarketItem({{ listing.market_id }}, '{{ listing.item_name }}', {{ listing.price }})">
+                                            <i class="fas fa-shopping-cart"></i> 购买
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-danger btn-sm w-100" onclick="delistItem({{ listing.market_id }}, '{{ listing.item_name }}')">
+                                            <i class="fas fa-times"></i> 下架
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 暂无鱼竿在售
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 饰品标签页 -->
+                    <div class="tab-pane fade" id="accessories" role="tabpanel">
+                        {% if accessories %}
+                        <div class="row g-3">
+                            {% for listing in accessories %}
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="mb-1">{{ listing.item_name }}</h6>
+                                                <span class="badge bg-info">
+                                                    {% for i in range(listing.rarity) %}★{% endfor %}
+                                                </span>
+                                                {% if listing.refine_level > 0 %}
+                                                <span class="badge bg-warning text-dark">+{{ listing.refine_level }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="text-warning fw-bold">
+                                                    <i class="fas fa-coins"></i> {{ listing.price }}
+                                                </div>
+                                                <small class="text-muted">卖家: {{ listing.seller_name if not listing.is_anonymous else '匿名' }}</small>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mb-2">{{ listing.description or '暂无描述' }}</p>
+                                        {% if listing.attributes %}
+                                        <div class="small text-info mb-2">{{ listing.attributes }}</div>
+                                        {% endif %}
+                                        {% if listing.seller_id != user_id %}
+                                        <button class="btn btn-success btn-sm w-100" onclick="buyMarketItem({{ listing.market_id }}, '{{ listing.item_name }}', {{ listing.price }})">
+                                            <i class="fas fa-shopping-cart"></i> 购买
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-danger btn-sm w-100" onclick="delistItem({{ listing.market_id }}, '{{ listing.item_name }}')">
+                                            <i class="fas fa-times"></i> 下架
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 暂无饰品在售
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 鱼类标签页 -->
+                    <div class="tab-pane fade" id="fish" role="tabpanel">
+                        {% if fish %}
+                        <div class="row g-3">
+                            {% for listing in fish %}
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="mb-1">{{ listing.item_name }}</h6>
+                                                <span class="badge bg-info">
+                                                    {% for i in range(listing.rarity) %}★{% endfor %}
+                                                </span>
+                                                {% if listing.quality_level > 1 %}
+                                                <span class="badge bg-success">{{ listing.quality_level }}星品质</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="text-warning fw-bold">
+                                                    <i class="fas fa-coins"></i> {{ listing.price }}
+                                                </div>
+                                                <small class="text-muted">数量: {{ listing.quantity }}</small><br>
+                                                <small class="text-muted">卖家: {{ listing.seller_name if not listing.is_anonymous else '匿名' }}</small>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mb-2">{{ listing.description or '暂无描述' }}</p>
+                                        {% if listing.seller_id != user_id %}
+                                        <button class="btn btn-success btn-sm w-100" onclick="buyMarketItem({{ listing.market_id }}, '{{ listing.item_name }}', {{ listing.price }})">
+                                            <i class="fas fa-shopping-cart"></i> 购买
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-danger btn-sm w-100" onclick="delistItem({{ listing.market_id }}, '{{ listing.item_name }}')">
+                                            <i class="fas fa-times"></i> 下架
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 暂无鱼类在售
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 道具标签页 -->
+                    <div class="tab-pane fade" id="items" role="tabpanel">
+                        {% if items %}
+                        <div class="row g-3">
+                            {% for listing in items %}
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="mb-1">{{ listing.item_name }}</h6>
+                                                <span class="badge bg-info">
+                                                    {% for i in range(listing.rarity) %}★{% endfor %}
+                                                </span>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="text-warning fw-bold">
+                                                    <i class="fas fa-coins"></i> {{ listing.price }}
+                                                </div>
+                                                <small class="text-muted">数量: {{ listing.quantity }}</small><br>
+                                                <small class="text-muted">卖家: {{ listing.seller_name if not listing.is_anonymous else '匿名' }}</small>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mb-2">{{ listing.description or '暂无描述' }}</p>
+                                        {% if listing.seller_id != user_id %}
+                                        <button class="btn btn-success btn-sm w-100" onclick="buyMarketItem({{ listing.market_id }}, '{{ listing.item_name }}', {{ listing.price }})">
+                                            <i class="fas fa-shopping-cart"></i> 购买
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-danger btn-sm w-100" onclick="delistItem({{ listing.market_id }}, '{{ listing.item_name }}')">
+                                            <i class="fas fa-times"></i> 下架
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 暂无道具在售
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧：上架物品 -->
+    <div class="col-lg-4">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-upload"></i> 上架物品</h5>
+            </div>
+            <div class="card-body">
+                <form id="listingForm">
+                    <!-- 选择物品类型 -->
+                    <div class="mb-3">
+                        <label class="form-label">物品类型</label>
+                        <select class="form-select" id="itemType" onchange="updateItemOptions()">
+                            <option value="">请选择...</option>
+                            <option value="rod">鱼竿</option>
+                            <option value="accessory">饰品</option>
+                            <option value="fish">鱼类</option>
+                            <option value="item">道具</option>
+                        </select>
+                    </div>
+
+                    <!-- 稀有度筛选 -->
+                    <div class="mb-3" id="rarityFilterGroup" style="display: none;">
+                        <label class="form-label">稀有度筛选</label>
+                        <select class="form-select" id="rarityFilter" onchange="updateItemOptions()">
+                            <option value="">全部稀有度</option>
+                            <option value="1">★ 1星</option>
+                            <option value="2">★★ 2星</option>
+                            <option value="3">★★★ 3星</option>
+                            <option value="4">★★★★ 4星</option>
+                            <option value="5">★★★★★ 5星</option>
+                        </select>
+                    </div>
+
+                    <!-- 选择具体物品 -->
+                    <div class="mb-3" id="itemSelectGroup" style="display: none;">
+                        <label class="form-label">选择物品</label>
+                        <select class="form-select" id="itemSelect">
+                            <option value="">请选择...</option>
+                        </select>
+                    </div>
+
+                    <!-- 数量输入（仅鱼类和道具） -->
+                    <div class="mb-3" id="quantityGroup" style="display: none;">
+                        <label class="form-label">上架数量</label>
+                        <input type="number" class="form-control" id="quantity" min="1" value="1">
+                    </div>
+
+                    <!-- 价格输入 -->
+                    <div class="mb-3">
+                        <label class="form-label">单价（金币）</label>
+                        <input type="number" class="form-control" id="price" min="1" placeholder="输入价格">
+                        <small class="text-muted">上架手续费: 2%</small>
+                    </div>
+
+                    <!-- 匿名选项 -->
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="isAnonymous">
+                        <label class="form-check-label" for="isAnonymous">
+                            匿名上架
+                        </label>
+                    </div>
+
+                    <!-- 上架按钮 -->
+                    <button type="button" class="btn btn-success w-100" onclick="listItem()">
+                        <i class="fas fa-upload"></i> 上架
+                    </button>
+                </form>
+
+                <hr>
+
+                <!-- 我的上架列表 -->
+                <div>
+                    <h6 class="mb-2"><i class="fas fa-list"></i> 我的上架</h6>
+                    {% if my_listings %}
+                    <div class="list-group">
+                        {% for listing in my_listings %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ listing.item_name }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-coins text-warning"></i> {{ listing.price }}
+                                        {% if listing.quantity > 1 %} x{{ listing.quantity }}{% endif %}
+                                    </small>
+                                </div>
+                                <button class="btn btn-sm btn-danger" onclick="delistItem({{ listing.market_id }}, '{{ listing.item_name }}')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small">暂无上架物品</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 用户库存数据
+const userInventory = {{ user_inventory_json|safe }};
+
+// 更新物品选项
+function updateItemOptions() {
+    const itemType = document.getElementById('itemType').value;
+    const rarityFilter = document.getElementById('rarityFilter').value;
+    const itemSelect = document.getElementById('itemSelect');
+    const itemSelectGroup = document.getElementById('itemSelectGroup');
+    const quantityGroup = document.getElementById('quantityGroup');
+    const rarityFilterGroup = document.getElementById('rarityFilterGroup');
+    
+    itemSelect.innerHTML = '<option value="">请选择...</option>';
+    
+    if (!itemType) {
+        itemSelectGroup.style.display = 'none';
+        quantityGroup.style.display = 'none';
+        rarityFilterGroup.style.display = 'none';
+        return;
+    }
+    
+    itemSelectGroup.style.display = 'block';
+    rarityFilterGroup.style.display = 'block';
+    
+    // 根据类型显示/隐藏数量输入
+    if (itemType === 'fish' || itemType === 'item') {
+        quantityGroup.style.display = 'block';
+    } else {
+        quantityGroup.style.display = 'none';
+    }
+    
+    // 填充选项（应用稀有度筛选）
+    let inventory = userInventory[itemType] || [];
+    
+    // 按稀有度筛选
+    if (rarityFilter) {
+        const targetRarity = parseInt(rarityFilter);
+        inventory = inventory.filter(item => item.rarity === targetRarity);
+    }
+    
+    // 按稀有度降序排序
+    inventory.sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
+    
+    inventory.forEach(item => {
+        const option = document.createElement('option');
+        option.value = JSON.stringify(item);
+        
+        let text = item.name;
+        
+        // 显示稀有度星级
+        if (item.rarity) {
+            text += ' ' + '★'.repeat(item.rarity);
+        }
+        
+        if (item.refine_level > 0) {
+            text += ` (+${item.refine_level})`;
+        }
+        if (item.quality_level > 1) {
+            text += ` (${item.quality_level}星品质)`;
+        }
+        if (item.quantity) {
+            text += ` x${item.quantity}`;
+        }
+        if (item.display_code) {
+            text += ` [${item.display_code}]`;
+        }
+        
+        option.textContent = text;
+        itemSelect.appendChild(option);
+    });
+    
+    // 显示筛选结果数量
+    if (rarityFilter && inventory.length === 0) {
+        const noResultOption = document.createElement('option');
+        noResultOption.value = "";
+        noResultOption.textContent = "该稀有度无可用物品";
+        itemSelect.appendChild(noResultOption);
+    }
+}
+
+// 上架物品
+async function listItem() {
+    const itemType = document.getElementById('itemType').value;
+    const itemSelectValue = document.getElementById('itemSelect').value;
+    const price = parseInt(document.getElementById('price').value);
+    const isAnonymous = document.getElementById('isAnonymous').checked;
+    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+    
+    if (!itemType || !itemSelectValue) {
+        showToast('请选择要上架的物品', 'error');
+        return;
+    }
+    
+    if (!price || price <= 0) {
+        showToast('请输入有效的价格', 'error');
+        return;
+    }
+    
+    const selectedItem = JSON.parse(itemSelectValue);
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_list_item") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                item_type: itemType,
+                item_instance_id: selectedItem.instance_id || selectedItem.fish_id || selectedItem.item_id,
+                price: price,
+                is_anonymous: isAnonymous,
+                quantity: quantity,
+                quality_level: selectedItem.quality_level || 0
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 购买物品
+async function buyMarketItem(marketId, itemName, price) {
+    if (!confirm(`确认购买【${itemName}】吗？\n价格: ${price} 金币`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_buy_market_item") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ market_id: marketId })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 下架物品
+async function delistItem(marketId, itemName) {
+    if (!confirm(`确认下架【${itemName}】吗？`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_delist_item") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ market_id: marketId })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "layout.html" %}
+
+{% block title %}钓鱼区域管理{% endblock %}
+
+{% block extra_css %}
+<style>
+.fish-list-toggle {
+    transition: all 0.3s ease;
+}
+
+.fish-list-toggle .fa-chevron-down {
+    transition: transform 0.3s ease;
+}
+
+.fish-list-toggle[aria-expanded="true"] .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.collapse {
+    max-height: 300px;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>钓鱼区域管理</h2>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createZoneModal">
+            <i class="fas fa-plus"></i> 创建新区域
+        </button>
+    </div>
+    <p>管理游戏中的钓鱼区域。您可以创建、编辑、删除区域，并配置每个区域的详细参数。</p>
+
+    <div id="zones-list">
+        {% for zone in zones %}
+        <div class="card mb-4" id="zone-card-{{ zone.id }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4>{{ zone.name }} (ID: {{ zone.id }})</h4>
+                <div>
+                    <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#editZoneModal" data-bs-id="{{ zone.id }}"><i class="fas fa-edit"></i> 编辑</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteZone({{ zone.id }})"><i class="fas fa-trash"></i> 删除</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <p><strong>描述:</strong> {{ zone.description }}</p>
+                <p><strong>状态:</strong> 
+                    <span class="badge bg-{{ 'success' if zone.is_active else 'secondary' }}">
+                        {{ '启用' if zone.is_active else '禁用' }}
+                    </span>
+                </p>
+                {% if zone.available_from or zone.available_until %}
+                <p><strong>开放时间:</strong> 
+                    {{ zone.available_from if zone.available_from else '不限' }} - 
+                    {{ zone.available_until if zone.available_until else '不限' }}
+                </p>
+                {% endif %}
+                <p><strong>稀有鱼每日配额:</strong> {{ zone.daily_rare_fish_quota }}</p>
+                <p><strong>钓鱼消耗:</strong> {{ zone.fishing_cost }} 金币</p>
+                {% if zone.requires_pass and zone.required_item_id %}
+                <p><strong>通行证要求:</strong> 
+                    <span class="badge bg-warning">
+                        {% for item in all_items if item.item_id == zone.required_item_id %}
+                            {{ item.name }}
+                        {% endfor %}
+                    </span>
+                </p>
+                {% else %}
+                <p><strong>通行证要求:</strong> <span class="badge bg-success">无需通行证</span></p>
+                {% endif %}
+                <div><strong>限定鱼类 ({{ zone.specific_fish_ids|length }}):</strong>
+                    {% if zone.specific_fish_ids|length > 0 %}
+                        {% if zone.specific_fish_ids|length <= 5 %}
+                            <ul class="list-group list-group-flush">
+                                {% for fish_id in zone.specific_fish_ids %}
+                                    {% for fish in all_fish if fish.fish_id == fish_id %}
+                                        <li class="list-group-item">{{ fish.name }} (ID: {{ fish.fish_id }})</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-secondary fish-list-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#fishList-{{ zone.id }}" aria-expanded="false" aria-controls="fishList-{{ zone.id }}">
+                                    <i class="fas fa-chevron-down"></i> 查看全部 {{ zone.specific_fish_ids|length }} 种鱼类
+                                </button>
+                                <div class="collapse mt-2" id="fishList-{{ zone.id }}">
+                                    <ul class="list-group list-group-flush">
+                                        {% for fish_id in zone.specific_fish_ids %}
+                                            {% for fish in all_fish if fish.fish_id == fish_id %}
+                                                <li class="list-group-item">{{ fish.name }} (ID: {{ fish.fish_id }})</li>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted">无 (使用全局鱼池)</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Create Zone Modal -->
+<div class="modal fade" id="createZoneModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="createZoneModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createZoneModalLabel">创建新区域</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Form content will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Zone Modal -->
+<div class="modal fade" id="editZoneModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="editZoneModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editZoneModalLabel">编辑区域</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Form content will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const zonesData = {{ zones|tojson }};
+    const allFishData = {{ all_fish|tojson }};
+    const allItemsData = {{ all_items|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/zones_manager.js') }}"></script>
+{% endblock %}

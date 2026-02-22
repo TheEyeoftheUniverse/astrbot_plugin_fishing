@@ -1,0 +1,263 @@
+{% extends "layout.html" %}
+
+{% block title %}鱼类图鉴 - 钓鱼游戏{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-0">
+            <i class="fas fa-book"></i> 鱼类图鉴
+        </h2>
+        <p class="text-muted mt-2">收集图鉴，探索更多鱼类品种</p>
+    </div>
+</div>
+
+<!-- 统计信息 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-chart-pie"></i> 收集进度</h5>
+                <h2 class="mb-0">{{ caught_count }} / {{ total_fish }}</h2>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar bg-white" role="progressbar" 
+                         style="width: {{ (caught_count / total_fish * 100) if total_fish > 0 else 0 }}%">
+                    </div>
+                </div>
+                <small>{{ "%.1f" | format((caught_count / total_fish * 100) if total_fish > 0 else 0) }}% 完成</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-trophy"></i> 收集成就</h5>
+                <h2 class="mb-0">
+                    {% if caught_count >= total_fish %}
+                        图鉴大师
+                    {% elif caught_count >= total_fish * 0.8 %}
+                        资深钓手
+                    {% elif caught_count >= total_fish * 0.5 %}
+                        钓鱼达人
+                    {% else %}
+                        新手钓手
+                    {% endif %}
+                </h2>
+                <small>继续加油，收集更多鱼类！</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 稀有度筛选 -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm active" onclick="filterByRarity('all')">
+                <i class="fas fa-th"></i> 全部
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(1)">普通</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(2)">常见</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(3)">优质</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(4)">稀有</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(5)">史诗</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(6)">传说</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(7)">神话</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(8)">远古</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(9)">永恒</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByRarity(10)">至高</button>
+        </div>
+    </div>
+</div>
+
+<!-- 名字搜索 -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="fishNameSearch" placeholder="输入鱼类名字进行搜索..." oninput="filterByName()">
+            <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                <i class="fas fa-times"></i> 清除
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 按稀有度分组显示 -->
+{% for rarity in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] %}
+    {% if rarity in fish_by_rarity %}
+    <div class="row mb-2 rarity-section" data-rarity="{{ rarity }}">
+        <div class="col-12">
+            <h5>
+                <i class="fas fa-star"></i> 
+                {% if rarity == 1 %}普通
+                {% elif rarity == 2 %}常见
+                {% elif rarity == 3 %}优质
+                {% elif rarity == 4 %}稀有
+                {% elif rarity == 5 %}史诗
+                {% elif rarity == 6 %}传说
+                {% elif rarity == 7 %}神话
+                {% elif rarity == 8 %}远古
+                {% elif rarity == 9 %}永恒
+                {% elif rarity == 10 %}至高
+                {% else %}未知
+                {% endif %}
+                ({{ fish_by_rarity[rarity]|length }})
+            </h5>
+        </div>
+    </div>
+    
+    <div class="row g-3 mb-4 rarity-section" data-rarity="{{ rarity }}">
+        {% for fish in fish_by_rarity[rarity] %}
+        <div class="col-md-6 col-lg-4 fish-card" data-fish-name="{{ fish.name }}">
+            <div class="card h-100 {% if not fish.is_caught %}border-secondary{% else %}border-primary{% endif %}">
+                <!-- 图片位置 -->
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    {% if fish.is_caught %}
+                        <div class="text-center text-white">
+                            <i class="fas fa-fish fa-4x mb-2"></i>
+                            <p class="mb-0 small">鱼类图片</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-white-50">
+                            <i class="fas fa-question-circle fa-4x mb-2"></i>
+                            <p class="mb-0 small">未解锁</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">
+                                {% if fish.is_caught %}
+                                    <i class="fas fa-check-circle text-success"></i> {{ fish.name }}
+                                {% else %}
+                                    <i class="fas fa-question-circle text-muted"></i> ???
+                                {% endif %}
+                            </h5>
+                            <div>
+                                <span class="badge bg-info">
+                                    {% for i in range(rarity) %}★{% endfor %}
+                                </span>
+                                <small class="text-muted ms-2">ID: {{ fish.id }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-2">
+                    
+                    {% if fish.is_caught %}
+                        <p class="card-text mb-2" style="min-height: 40px;">{{ fish.description or '暂无描述' }}</p>
+                        
+                        <!-- 统计数据 -->
+                        <div class="small text-muted mb-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span><i class="fas fa-fish"></i> 捕获次数:</span>
+                                <strong>{{ fish.total_caught }}</strong>
+                            </div>
+                            {% if fish.max_weight %}
+                            <div class="d-flex justify-content-between mb-1">
+                                <span><i class="fas fa-weight-hanging"></i> 最大重量:</span>
+                                <strong>{{ "%.2f"|format(fish.max_weight / 1000) }}kg</strong>
+                            </div>
+                            {% endif %}
+                            {% if fish.min_weight %}
+                            <div class="d-flex justify-content-between">
+                                <span><i class="fas fa-weight-hanging"></i> 最小重量:</span>
+                                <strong>{{ "%.2f"|format(fish.min_weight / 1000) }}kg</strong>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-coins text-warning"></i> {{ fish.base_value }}
+                                </small>
+                                <span class="badge bg-success">已解锁</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="card-text flex-grow-1 mb-2 text-muted" style="min-height: 60px;">暂未解锁，需要钓到此鱼类</p>
+                        <div class="mt-auto">
+                            <span class="badge bg-secondary">未解锁</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+{% endfor %}
+
+<!-- 提示信息 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> 温馨提示</h5>
+            <ul class="mb-0">
+                <li>不同钓鱼区域可以钓到不同稀有度的鱼类</li>
+                <li>使用更高级的鱼竿和饰品可以提升稀有鱼出现概率</li>
+                <li>收集图鉴可以解锁成就和奖励</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 稀有度筛选功能
+function filterByRarity(rarity) {
+    const sections = document.querySelectorAll('.rarity-section');
+    const buttons = document.querySelectorAll('.btn-group button');
+    
+    // 更新按钮状态
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (rarity === 'all') {
+        sections.forEach(section => section.style.display = '');
+    } else {
+        sections.forEach(section => {
+            if (section.dataset.rarity == rarity) {
+                section.style.display = '';
+            } else {
+                section.style.display = 'none';
+            }
+        });
+    }
+    
+    // 名字搜索后重新应用
+    filterByName();
+}
+
+// 名字搜索功能
+function filterByName() {
+    const searchText = document.getElementById('fishNameSearch').value.toLowerCase();
+    const fishCards = document.querySelectorAll('.fish-card');
+    
+    fishCards.forEach(card => {
+        const fishName = card.dataset.fishName.toLowerCase();
+        const parentSection = card.closest('.rarity-section[data-rarity]');
+        
+        // 只有在父分组显示时才检查名字筛选
+        if (parentSection && parentSection.style.display !== 'none') {
+            if (searchText === '' || fishName.includes(searchText)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        }
+    });
+}
+
+// 清除搜索
+function clearSearch() {
+    document.getElementById('fishNameSearch').value = '';
+    filterByName();
+}
+</script>
+{% endblock %}

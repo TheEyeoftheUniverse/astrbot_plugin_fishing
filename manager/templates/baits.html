@@ -1,0 +1,125 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fas fa-bug"></i> 鱼饵管理</h2>
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#itemModal" id="addItemBtn">
+        <i class="fas fa-plus"></i> 添加新鱼饵
+    </button>
+</div>
+
+<div class="card border-primary">
+    <div class="card-header">现有鱼饵列表</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名称</th>
+                        <th>稀有度</th>
+                        <th>成本</th>
+                        <th>效果描述</th>
+                        <th class="text-center">结构化效果</th>
+                        <th class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.bait_id }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ '★' * item.rarity }}</td>
+                        <td>{{ item.cost }}</td>
+                        <td>{{ item.effect_description or '无' }}</td>
+                        <td>
+                            <span class="badge bg-success" title="成功率加成">+{{ item.success_rate_modifier * 100 }}%</span>
+                            <span class="badge bg-info" title="稀有度加成">+{{ item.rare_chance_modifier * 100 }}%</span>
+                            <span class="badge bg-secondary" title="垃圾减少率">{{ item.garbage_reduction_modifier * 100 }}%</span>
+                            <span class="badge bg-warning text-dark" title="价值乘数">x{{ item.value_modifier }}</span>
+                            <span class="badge bg-primary" title="数量乘数">x{{ item.quantity_modifier }}</span>
+                            {% if item.is_consumable %}
+                                <span class="badge bg-danger">消耗品</span>
+                            {% else %}
+                                <span class="badge bg-dark">可重复</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-info edit-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#itemModal"
+                                    data-item-json='{{ item|tojson|safe }}'>
+                                <i class="fas fa-edit"></i> 编辑
+                            </button>
+                            <form action="{{ url_for('admin_bp.delete_bait', bait_id=item.bait_id) }}" method="post" class="d-inline" onsubmit="return confirm('确定要删除【{{ item.name }}】吗？');">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="item-form" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="itemModalLabel">管理鱼饵</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-8"><label>名称</label><input type="text" name="name" class="form-control" required></div>
+                        <div class="col-md-4">
+                            <label>稀有度</label>
+                            <input type="number" name="rarity" class="form-control" min="1" required>
+                            <div class="form-text text-muted small">支持任意星级</div>
+                        </div>
+                        <div class="col-12"><label>描述 (给玩家看)</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+                        <div class="col-12"><label>效果描述 (给玩家看)</label><textarea name="effect_description" class="form-control" rows="2"></textarea></div>
+
+                        <hr class="my-4">
+                        <h6 class="mb-3">核心数值配置</h6>
+
+                        <div class="col-md-4"><label>持续分钟(0为一次性)</label><input type="number" name="duration_minutes" class="form-control" value="0"></div>
+                        <div class="col-md-4"><label>购买成本</label><input type="number" name="cost" class="form-control" value="0"></div>
+                        <div class="col-md-4"><label>要求鱼竿稀有度</label><input type="number" name="required_rod_rarity" class="form-control" value="0"></div>
+
+                        <div class="col-md-4"><label>成功率加成 (+0.1 = +10%)</label><input type="number" step="0.01" name="success_rate_modifier" class="form-control" value="0.0"></div>
+                        <div class="col-md-4"><label>稀有率加成 (+0.05 = +5%)</label><input type="number" step="0.01" name="rare_chance_modifier" class="form-control" value="0.0"></div>
+                        <div class="col-md-4"><label>垃圾减少率 (0.5 = 50%)</label><input type="number" step="0.01" name="garbage_reduction_modifier" class="form-control" value="0.0"></div>
+                        <div class="col-md-4"><label>价值乘数 (1.1 = +10%)</label><input type="number" step="0.01" name="value_modifier" class="form-control" value="1.0"></div>
+                        <div class="col-md-4"><label>数量乘数 (2.0 = 双倍)</label><input type="number" step="0.01" name="quantity_modifier" class="form-control" value="1.0"></div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_consumable" id="isConsumable" checked>
+                                <label class="form-check-label" for="isConsumable">是一次性消耗品</label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
+<script>
+    const addUrl = "{{ url_for('admin_bp.add_bait') }}";
+    const editUrlBase = "{{ url_for('admin_bp.edit_bait', bait_id=0) }}".slice(0, -1);
+</script>
+<script src="{{ url_for('admin_bp.static', filename='js/baits_manager.js') }}"></script>
+{% endblock %}

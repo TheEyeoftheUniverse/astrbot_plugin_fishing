@@ -1,0 +1,14 @@
+# Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# 本地测试脚本
+.test/
+
+.vscode/
+.cursor/
+.idea/
+
+*.db

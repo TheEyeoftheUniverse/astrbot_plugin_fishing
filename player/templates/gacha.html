@@ -1,0 +1,418 @@
+{% extends "layout.html" %}
+
+{% block title %}抽卡 - 钓鱼插件{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-dice"></i> 抽卡系统</h2>
+        <p class="text-muted">试试运气，抽取稀有物品！</p>
+    </div>
+</div>
+
+<!-- 用户资产显示 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card bg-warning bg-opacity-10">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-coins fa-3x text-warning me-3"></i>
+                <div>
+                    <h6 class="mb-0 text-muted">金币</h6>
+                    <h3 class="mb-0">{{ user.coins | default(0) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-info bg-opacity-10">
+            <div class="card-body d-flex align-items-center">
+                <i class="fas fa-gem fa-3x text-info me-3"></i>
+                <div>
+                    <h6 class="mb-0 text-muted">高级货币</h6>
+                    <h3 class="mb-0">{{ user.premium_currency | default(0) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 卡池列表 -->
+<div class="row">
+    {% for pool in pools %}
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 {% if pool.is_limited_time %}border-danger{% endif %} d-flex flex-column">
+            <div class="card-header {% if pool.is_limited_time %}bg-danger text-white{% else %}bg-primary text-white{% endif %}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-gift"></i> {{ pool.name }}
+                    </h5>
+                    {% if pool.is_limited_time %}
+                    <span class="badge bg-warning text-dark">限时</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <!-- 卡池描述 -->
+                <p class="text-muted">{{ pool.description }}</p>
+                
+                {% if pool.is_limited_time and pool.open_until %}
+                <div class="alert alert-warning small mb-3">
+                    <i class="fas fa-clock"></i> 限时开放至: {{ pool.open_until.strftime('%Y-%m-%d %H:%M') if pool.open_until else pool.open_until }}
+                </div>
+                {% endif %}
+                
+                <!-- 费用信息 -->
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">抽卡费用</h6>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>单抽:</span>
+                        {% if pool.cost_premium_currency > 0 %}
+                        <strong class="text-info">
+                            <i class="fas fa-gem"></i> {{ pool.cost_premium_currency }} 高级货币
+                        </strong>
+                        {% else %}
+                        <strong class="text-warning">
+                            <i class="fas fa-coins"></i> {{ pool.cost_coins }} 金币
+                        </strong>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>十连:</span>
+                        {% if pool.cost_premium_currency > 0 %}
+                        <strong class="text-info">
+                            <i class="fas fa-gem"></i> {{ pool.cost_premium_currency * 10 }} 高级货币
+                        </strong>
+                        {% else %}
+                        <strong class="text-warning">
+                            <i class="fas fa-coins"></i> {{ pool.cost_coins * 10 }} 金币
+                        </strong>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 今日免费次数 -->
+                {% if pool.is_free %}
+                <div class="alert alert-success mb-3">
+                    <i class="fas fa-gift"></i> 
+                    {% if pool.drawn_today %}
+                    今日免费补给已领取，明天再来！
+                    {% else %}
+                    每日免费补给可用！
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- 奖品预览 -->
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-outline-info w-100" onclick="showPoolDetails({{ pool.gacha_pool_id }})">
+                        <i class="fas fa-eye"></i> 查看奖品详情
+                    </button>
+                </div>
+                
+                <!-- 撑开空间 -->
+                <div class="flex-grow-1"></div>
+                
+                <hr>
+                
+                <!-- 抽卡操作 -->
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-success w-100" 
+                                onclick="performDraw({{ pool.gacha_pool_id }}, 1, '{{ pool.name }}')"
+                                {% if pool.is_free and pool.drawn_today %}disabled{% endif %}>
+                            <i class="fas fa-dice-one"></i> 单抽
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-primary w-100" 
+                                onclick="performDraw({{ pool.gacha_pool_id }}, 10, '{{ pool.name }}')"
+                                {% if pool.is_free %}disabled{% endif %}>
+                            <i class="fas fa-dice-d20"></i> 十连
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 多次十连按钮 -->
+                {% if not pool.is_free %}
+                <div class="mt-2">
+                    <button class="btn btn-warning w-100" 
+                            onclick="performMultiDraw({{ pool.gacha_pool_id }}, '{{ pool.name }}')">
+                        <i class="fas fa-dice"></i> 多次十连
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 抽卡记录 -->
+{% if recent_records %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-history"></i> 最近抽卡记录</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>卡池</th>
+                                <th>物品</th>
+                                <th>稀有度</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in recent_records %}
+                            <tr>
+                                <td>{{ record.created_at.strftime('%m-%d %H:%M') if record.created_at else '-' }}</td>
+                                <td>{{ record.pool_name }}</td>
+                                <td>{{ record.item_name }}</td>
+                                <td>
+                                    {% if record.item_rarity %}
+                                    <span class="text-warning">{{ '⭐' * record.item_rarity }}</span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 奖品详情模态框 -->
+<div class="modal fade" id="poolDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-gift"></i> 卡池奖品详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="poolDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 抽卡结果模态框 -->
+<div class="modal fade" id="drawResultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-trophy"></i> 抽卡结果</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="drawResultContent">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="location.reload()">
+                    <i class="fas fa-sync"></i> 刷新页面
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 查看卡池详情
+async function showPoolDetails(poolId) {
+    const modal = new bootstrap.Modal(document.getElementById('poolDetailsModal'));
+    modal.show();
+    
+    try {
+        const response = await fetch(`{{ url_for("player_bp.api_get_pool_details") }}?pool_id=${poolId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const pool = data.pool;
+            const probabilities = data.probabilities;
+            
+            let html = `<h5 class="mb-3">${pool.name}</h5>`;
+            html += `<p class="text-muted">${pool.description}</p>`;
+            html += '<hr><h6>奖品列表及概率：</h6>';
+            html += '<div class="table-responsive"><table class="table table-hover">';
+            html += '<thead><tr><th>物品</th><th>稀有度</th><th>概率</th></tr></thead><tbody>';
+            
+            for (const item of probabilities) {
+                const stars = item.item_rarity > 0 ? '⭐'.repeat(item.item_rarity) : '-';
+                const probability = (item.probability * 100).toFixed(2) + '%';
+                html += `<tr>
+                    <td>${item.item_name}</td>
+                    <td><span class="text-warning">${stars}</span></td>
+                    <td>${probability}</td>
+                </tr>`;
+            }
+            
+            html += '</tbody></table></div>';
+            document.getElementById('poolDetailsContent').innerHTML = html;
+        } else {
+            document.getElementById('poolDetailsContent').innerHTML = 
+                `<div class="alert alert-danger">${data.message}</div>`;
+        }
+    } catch (error) {
+        document.getElementById('poolDetailsContent').innerHTML = 
+            '<div class="alert alert-danger">加载失败，请稍后重试</div>';
+    }
+}
+
+// 执行抽卡
+async function performDraw(poolId, numDraws, poolName) {
+    const drawType = numDraws === 1 ? '单抽' : '十连';
+    if (!confirm(`确认在【${poolName}】进行${drawType}吗？`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_perform_draw") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                pool_id: poolId,
+                num_draws: numDraws
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showDrawResult(data.results, numDraws);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 多次十连
+async function performMultiDraw(poolId, poolName) {
+    const times = prompt(`【${poolName}】多次十连\n请输入十连次数（1-100）:`, '5');
+    if (!times) return;
+    
+    const numTimes = parseInt(times);
+    if (isNaN(numTimes) || numTimes < 1 || numTimes > 100) {
+        showToast('次数必须在1-100之间', 'error');
+        return;
+    }
+    
+    if (!confirm(`确认进行${numTimes}次十连（共${numTimes * 10}抽）吗？`)) {
+        return;
+    }
+    
+    showToast('抽卡中，请稍候...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("player_bp.api_perform_multi_draw") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                pool_id: poolId,
+                times: numTimes
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMultiDrawResult(data);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (error) {
+        showToast('网络错误，请稍后重试', 'error');
+    }
+}
+
+// 显示抽卡结果
+function showDrawResult(results, numDraws) {
+    let html = '<h5 class="mb-3">🎉 恭喜！您获得了：</h5>';
+    html += '<div class="row">';
+    
+    for (const item of results) {
+        const stars = item.rarity > 0 ? '⭐'.repeat(item.rarity) : '';
+        const rarityClass = item.rarity >= 5 ? 'border-warning' : item.rarity >= 3 ? 'border-info' : '';
+        
+        html += `<div class="col-md-6 mb-3">
+            <div class="card ${rarityClass}">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">${stars}</div>
+                    <h6>${item.name}</h6>
+                    ${item.type === 'coins' ? `<p class="text-muted mb-0">${item.quantity} 金币</p>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }
+    
+    html += '</div>';
+    
+    document.getElementById('drawResultContent').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('drawResultModal'));
+    modal.show();
+}
+
+// 显示多次十连结果
+function showMultiDrawResult(data) {
+    let html = `<h5 class="mb-3">🎉 ${data.times}次十连完成！</h5>`;
+    
+    // 消耗统计
+    html += `<div class="alert alert-info">
+        <h6>💰 消耗统计</h6>
+        <p class="mb-0">共消耗: ${data.total_cost} ${data.cost_type}</p>
+        <p class="mb-0">共获得: ${data.total_items} 件物品</p>
+    </div>`;
+    
+    // 稀有度统计
+    if (data.rarity_counts) {
+        html += '<div class="alert alert-success"><h6>📊 稀有度统计</h6>';
+        for (let rarity = 10; rarity >= 1; rarity--) {
+            if (data.rarity_counts[rarity] > 0) {
+                const stars = '⭐'.repeat(rarity);
+                html += `<div>${stars} × ${data.rarity_counts[rarity]}</div>`;
+            }
+        }
+        html += '</div>';
+    }
+    
+    // 物品详情
+    if (data.item_counts) {
+        html += '<div class="alert alert-primary"><h6>🎁 物品详情</h6>';
+        const items = Object.entries(data.item_counts).sort((a, b) => b[1] - a[1]);
+        for (const [name, count] of items) {
+            html += `<div>${name} × ${count}</div>`;
+        }
+        html += '</div>';
+    }
+    
+    // 金币统计
+    if (data.coin_total > 0) {
+        html += `<div class="alert alert-warning">
+            <h6>💰 金币总计</h6>
+            <p class="mb-0">${data.coin_total.toLocaleString()} 金币</p>
+        </div>`;
+    }
+    
+    document.getElementById('drawResultContent').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('drawResultModal'));
+    modal.show();
+}
+</script>
+{% endblock %}
